@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <iostream>
 
-lay::Wav::Wav(){
+gtp::Wav::Wav(){
 
 	snd_pcm_open(&handle, "default",SND_PCM_STREAM_PLAYBACK, 0);
 
@@ -43,18 +43,15 @@ lay::Wav::Wav(){
 
 	printf("PCM name: '%s'\n", snd_pcm_name(handle));
 	printf("PCM state: %s\n", snd_pcm_state_name(snd_pcm_state(handle)));
-
-
 }
 
-void lay::Wav::play(const char* file){
+void gtp::Wav::play(const char* file){
 
 	this->fd = open(file,O_RDONLY);
 	int count=0;
 
 	while (read(this->fd,this->buf,this->size)){
 		count++;
-		
 			if (count>12){
 				err = snd_pcm_writei(handle, this->buf, frames);
 	    		if (err == -EPIPE) {
@@ -68,10 +65,8 @@ void lay::Wav::play(const char* file){
      			}
      	}
    	}
-
    	snd_pcm_drain(handle);
    	snd_pcm_close(handle);
-
 }
 
 

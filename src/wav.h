@@ -5,8 +5,8 @@
 */
 
 #include<alsa/asoundlib.h>
-namespace lay{
-	
+#include <string>
+namespace gtp {
 	class Wav {
 		
 		public:
@@ -28,6 +28,8 @@ namespace lay{
 			Wav();
 			//#################################
 			void play(const char * ptr);
+
+			void play(std::string file);
 
 	};
 
