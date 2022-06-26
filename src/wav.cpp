@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <iostream>
 
-gtp::Wav::Wav(){
+GTP::GWAV::GWAV(){
 
 	snd_pcm_open(&handle, "default",SND_PCM_STREAM_PLAYBACK, 0);
 
@@ -45,7 +45,7 @@ gtp::Wav::Wav(){
 	printf("PCM state: %s\n", snd_pcm_state_name(snd_pcm_state(handle)));
 }
 
-void gtp::Wav::play(const char* file){
+void GTP::GWAV::play(const char* file){
 
 	this->fd = open(file,O_RDONLY);
 	int count=0;

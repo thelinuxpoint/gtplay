@@ -29,7 +29,7 @@ namespace GTP {
 
 			char buf[256];
 			//#################################
-			Wav();
+			GWAV();
 			//#################################
 			void play(const char * ptr);
 
