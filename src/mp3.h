@@ -1,6 +1,8 @@
 #include<iostream>
 
+// project imports
 #include "wav.h"
+#include "tables.h"
 
 namespace GTP {
 
@@ -17,7 +19,7 @@ namespace GTP {
 			int channels;
 
 			unsigned mode_extension[2];
-			
+
 			bool info[3];
 
 			Emphasis emphasis;
@@ -29,7 +31,7 @@ namespace GTP {
 			bool valid;
 
 
-			/*##########################*/ 
+			/*##########################*/
 			static const int num_prev_frames = 9;
 			int prev_frame_size[9];
 			int frame_size;
@@ -45,7 +47,7 @@ namespace GTP {
 			int global_gain[2][2];
 			// Determines the number of bits used for the transmission of the scalefactors.
 			int scalefac_compress[2][2];
-			
+
 			int slen1[2][2];
 			int slen2[2][2];
 			bool window_switching[2][2];
@@ -71,7 +73,16 @@ namespace GTP {
 
 			float samples[2][2][576];
 			float pcm[576 * 4];
+			/**/
+			struct {
+				const unsigned *long_win;
+				const unsigned *short_win;
+			} band_index;
 
+			struct {
+				const unsigned *long_win;
+				const unsigned *short_win;
+			} band_width;
 
 			// PRIVATE FUNCTIONS STARTS HERE
 			/**/
@@ -80,7 +91,7 @@ namespace GTP {
 			void gmp3_set_layer(unsigned char byte);
 			/**/
 			void gmp3_set_mpeg_v();
-			
+
 			void gmp3_set_crc();
 
 			void gmp3_set_sampling_rate();
@@ -90,12 +101,14 @@ namespace GTP {
 			void gmp3_set_padding();
 
 			void gmp3_set_channel_mode(unsigned char *buffer);
-			
+
 			void gmp3_set_emphasis(unsigned char *buffer);
 
 			void gmp3_set_frame_size();
 
 			void gmp3_set_main_data(unsigned char *buffer);
+
+			void gmp3_set_info();
 
 		public:
 
@@ -111,17 +124,17 @@ namespace GTP {
 				DualChannel = 2,
 				Mono = 3
 			};
-			
+
 			enum Emphasis {
 				None = 0,
 				MS5015 = 1,
 				Reserved = 2,
 				CCITJ17 = 3
 			};
-			
+
 			/* GET Functions */
 			unsigned gmp3_get_layer();
-			
+
 			float gmp3_get_mpeg_v();
 
 			bool gmp3_get_crc();
