@@ -12,7 +12,23 @@
   |  Bitrate  Freq  Padding  private  Mode ModeExt copyright  copy Emphasis|
   +------------------------------------------------------------------------+
 */
+#define PI    3.141592653589793
 
+#define SQRT2 1.414213562373095
+
+
+GTP::GMP3::GMP3(unsigned char *buffer){
+	if (buffer[0] == 0xFF && buffer[1] >= 0xE0) {
+		valid = true;
+		frame_size = 0;
+		main_data_begin = 0;
+		gmp3_init_header(buffer);
+	}
+}
+
+/* ###############################################
+
+*/
 void GTP::GMP3::gmp3_init_header(unsigned char *buffer){
 
 	if (buffer[0] == 0xFF && buffer[1] >= 0xE0) {
@@ -22,11 +38,11 @@ void GTP::GMP3::gmp3_init_header(unsigned char *buffer){
 		gmp3_set_layer(buffer[1]);
 		gmp3_set_crc();
 		gmp3_set_info();
-		gmp3_set_emphasis();
+		gmp3_set_emphasis(buffer);
 		gmp3_set_sampling_rate();
-		// table
+		gmp3_set_tables();
 		gmp3_set_channel_mode(buffer);
-		gmp3_set_mode_extension();
+		gmp3_set_mode_extension(buffer);
 		gmp3_set_padding();
 		gmp3_set_bit_rate(buffer);
 		gmp3_set_frame_size();
@@ -36,6 +52,35 @@ void GTP::GMP3::gmp3_init_header(unsigned char *buffer){
 	}
 
 }
+/* ###############################################
+
+*/
+
+void GTP::GMP3::gmp3_init_frame_params(unsigned char *buffer){
+	gmp3_set_side_info(&buffer[crc == 0 ? 6 : 4]);
+	gmp3_set_main_data(buffer);
+	for (int gr = 0; gr < 2; gr++) {
+		for (int ch = 0; ch < channels; ch++)
+			gmp3_requantize(gr, ch);
+
+		if (channel_mode == JointStereo && mode_extension[0])
+			gmp3_ms_stereo(gr);
+
+		for (int ch = 0; ch < channels; ch++) {
+			if (block_type[gr][ch] == 2 || mixed_block_flag[gr][ch])
+				gmp3_reorder(gr, ch);
+			else
+				gmp3_alias_reduction(gr, ch);
+
+			gmp3_imdct(gr, ch);
+			gmp3_frequency_inversion(gr, ch);
+			gmp3_synth_filterbank(gr, ch);
+		}
+	}
+	gmp3_interleave();
+}
+
+
 /* ###############################################
 	‘1’ - then MPEG version 1
 	‘0’ - then MPEG version 2
@@ -147,7 +192,7 @@ void GTP::GMP3::gmp3_set_sampling_rate(){
 
 */
 void GTP::GMP3::gmp3_set_tables(){
-	
+
 	switch (sampling_rate) {
 		case 32000:
 			band_index.short_win = band_index_table.short_32;
@@ -191,8 +236,7 @@ void GTP::GMP3::gmp3_set_channel_mode(unsigned char *buffer){
 /* ###############################################
 	Applies only to joint stereo.
 */
-void GTP::GMP3::gmp3_set_mode_extension(unsigned char *buffer)
-{
+void GTP::GMP3::gmp3_set_mode_extension(unsigned char *buffer){
 	if (layer == 3) {
 		mode_extension[0] = buffer[3] & 0x20;
 		mode_extension[1] = buffer[3] & 0x10;
@@ -345,9 +389,6 @@ void GTP::GMP3::gmp3_set_side_info(unsigned char *buffer){
 		}
 }
 
-
-
-
 /* ###############################################
 
 */
@@ -373,6 +414,7 @@ void GTP::GMP3::gmp3_set_main_data(unsigned char *buffer){
 
 				int part[num_prev_frames];
 				part[frame] = main_data_begin;
+
 				for (int i = 0; i <= frame-1; i++) {
 					part[i] = prev_frame_size[i] - constant;
 					part[frame] -= part[i];
@@ -408,7 +450,7 @@ void GTP::GMP3::gmp3_set_main_data(unsigned char *buffer){
  factors for long windows and 12 for each short window.
 */
 
-void mp3::unpack_scalefac(unsigned char *main_data, int gr, int ch, int &bit)
+void GTP::GMP3::gmp3_unpack_scalefac(unsigned char *main_data, int gr, int ch, int &bit)
 {
 	int sfb = 0;
 	int window = 0;
@@ -474,7 +516,7 @@ void mp3::unpack_scalefac(unsigned char *main_data, int gr, int ch, int &bit)
 */
 
 
-void mp3::unpack_samples(unsigned char *main_data, int gr, int ch, int bit, int max_bit)
+void GTP::GMP3::gmp3_unpack_samples(unsigned char *main_data, int gr, int ch, int bit, int max_bit)
 {
 	int sample = 0;
 	int table_num;
@@ -586,8 +628,293 @@ void mp3::unpack_samples(unsigned char *main_data, int gr, int ch, int bit, int 
 	for (; sample < 576; sample++)
 		samples[gr][ch][sample] = 0;
 }
+/* ###############################################
+	OK - GIVEN IN PDF
+*/
+void GTP::GMP3::gmp3_requantize(int gr, int ch){
 
+	float exp1, exp2;
+	int window = 0;
+	int sfb = 0;
+	const float scalefac_mult = scalefac_scale[gr][ch] == 0 ? 0.5 : 1;
 
+	for (int sample = 0, i = 0; sample < 576; sample++, i++) {
+		if (block_type[gr][ch] == 2 || (mixed_block_flag[gr][ch] && sfb >= 8)) {
+			if (i == band_width.short_win[sfb]) {
+				i = 0;
+				if (window == 2) {
+					window = 0;
+					sfb++;
+				} else
+					window++;
+			}
+
+			exp1 = global_gain[gr][ch] - 210.0 - 8.0 * subblock_gain[gr][ch][window];
+			exp2 = scalefac_mult * scalefac_s[gr][ch][window][sfb];
+		} else {
+			if (sample == band_index.long_win[sfb + 1])
+				/* Don't increment sfb at the zeroth sample. */
+				sfb++;
+
+			exp1 = global_gain[gr][ch] - 210.0;
+			exp2 = scalefac_mult * (scalefac_l[gr][ch][sfb] + preflag[gr][ch] * pretab[sfb]);
+		}
+
+		float sign = samples[gr][ch][sample] < 0 ? -1.0f : 1.0f;
+		float a = std::pow(std::abs(samples[gr][ch][sample]), 4.0 / 3.0);
+		float b = std::pow(2.0, exp1 / 4.0);
+		float c = std::pow(2.0, -exp2);
+
+		samples[gr][ch][sample] = sign * a * b * c;
+	}
+}
+/* ###############################################
+
+*/
+/**
+ * Reorder short blocks, mapping from scalefactor subbands (for short windows) to 18 sample blocks.
+ * @param gr
+ * @param ch
+ */
+void GTP::GMP3::gmp3_reorder(int gr, int ch)
+{
+	int total = 0;
+	int start = 0;
+	int block = 0;
+	float samples[576] = {0};
+
+	for (int sb = 0; sb < 12; sb++) {
+		const int sb_width = band_width.short_win[sb];
+
+		for (int ss = 0; ss < sb_width; ss++) {
+			samples[start + block + 0] = this->samples[gr][ch][total + ss + sb_width * 0];
+			samples[start + block + 6] = this->samples[gr][ch][total + ss + sb_width * 1];
+			samples[start + block + 12] = this->samples[gr][ch][total + ss + sb_width * 2];
+
+			if (block != 0 && block % 5 == 0) { /* 6 * 3 = 18 */
+				start += 18;
+				block = 0;
+			} else
+				block++;
+		}
+
+		total += sb_width * 3;
+	}
+
+	for (int i = 0; i < 576; i++)
+		this->samples[gr][ch][i] = samples[i];
+}
+/* ###############################################
+
+*/
+/**
+ * The left and right channels are added together to form the middle channel. The
+ * difference between each channel is stored in the side channel.
+ * @param gr
+ */
+void GTP::GMP3::gmp3_ms_stereo(int gr)
+{
+	for (int sample = 0; sample < 576; sample++) {
+		float middle = samples[gr][0][sample];
+		float side = samples[gr][1][sample];
+		samples[gr][0][sample] = (middle + side) / SQRT2;
+		samples[gr][1][sample] = (middle - side) / SQRT2;
+	}
+}
+/* ###############################################
+
+*/
+/**
+ * @param gr
+ * @param ch
+ */
+void GTP::GMP3::gmp3_alias_reduction(int gr, int ch)
+{
+	static const float cs[8] {
+			.8574929257, .8817419973, .9496286491, .9833145925,
+			.9955178161, .9991605582, .9998991952, .9999931551
+	};
+	static const float ca[8] {
+			-.5144957554, -.4717319686, -.3133774542, -.1819131996,
+			-.0945741925, -.0409655829, -.0141985686, -.0036999747
+	};
+
+	int sb_max = mixed_block_flag[gr][ch] ? 2 : 32;
+
+	for (int sb = 1; sb < sb_max; sb++)
+		for (int sample = 0; sample < 8; sample++) {
+			int offset1 = 18 * sb - sample - 1;
+			int offset2 = 18 * sb + sample;
+			float s1 = samples[gr][ch][offset1];
+			float s2 = samples[gr][ch][offset2];
+			samples[gr][ch][offset1] = s1 * cs[sample] - s2 * ca[sample];
+			samples[gr][ch][offset2] = s2 * cs[sample] + s1 * ca[sample];
+		}
+}
+/* ###############################################
+
+*/
+/**
+ * Inverted modified discrete cosine transformations (IMDCT) are applied to each
+ * sample and are afterwards windowed to fit their window shape. As an addition, the
+ * samples are overlapped.
+ * @param gr
+ * @param ch
+ */
+void GTP::GMP3::gmp3_imdct(int gr, int ch)
+{
+	static bool init = true;
+	static float sine_block[4][36];
+	float sample_block[36];
+
+	if (init) {
+		int i;
+		for (i = 0; i < 36; i++)
+			sine_block[0][i] = std::sin(PI / 36.0 * (i + 0.5));
+		for (i = 0; i < 18; i++)
+			sine_block[1][i] = std::sin(PI / 36.0 * (i + 0.5));
+		for (; i < 24; i++)
+			sine_block[1][i] = 1.0;
+		for (; i < 30; i++)
+			sine_block[1][i] = std::sin(PI / 12.0 * (i - 18.0 + 0.5));
+		for (; i < 36; i++)
+			sine_block[1][i] = 0.0;
+		for (i = 0; i < 12; i++)
+			sine_block[2][i] = std::sin(PI / 12.0 * (i + 0.5));
+		for (i = 0; i < 6; i++)
+			sine_block[3][i] = 0.0;
+		for (; i < 12; i++)
+			sine_block[3][i] = std::sin(PI / 12.0 * (i - 6.0 + 0.5));
+		for (; i < 18; i++)
+			sine_block[3][i] = 1.0;
+		for (; i < 36; i++)
+			sine_block[3][i] = std::sin(PI / 36.0 * (i + 0.5));
+		init = false;
+	}
+
+	const int n = block_type[gr][ch] == 2 ? 12 : 36;
+	const int half_n = n / 2;
+	int sample = 0;
+
+	for (int block = 0; block < 32; block++) {
+		for (int win = 0; win < (block_type[gr][ch] == 2 ? 3 : 1); win++) {
+			for (int i = 0; i < n; i++) {
+				float xi = 0.0;
+				for (int k = 0; k < half_n; k++) {
+					float s = samples[gr][ch][18 * block + half_n * win + k];
+					xi += s * std::cos(PI / (2 * n) * (2 * i + 1 + half_n) * (2 * k + 1));
+				}
+
+				/* Windowing samples. */
+				sample_block[win * n + i] = xi * sine_block[block_type[gr][ch]][i];
+			}
+		}
+
+		if (block_type[gr][ch] == 2) {
+			float temp_block[36];
+			memcpy(temp_block, sample_block, 36 * 4);
+
+			int i = 0;
+			for (; i < 6; i++)
+				sample_block[i] = 0;
+			for (; i < 12; i++)
+				sample_block[i] = temp_block[0 + i - 6];
+			for (; i < 18; i++)
+				sample_block[i] = temp_block[0 + i - 6] + temp_block[12 + i - 12];
+			for (; i < 24; i++)
+				sample_block[i] = temp_block[12 + i - 12] + temp_block[24 + i - 18];
+			for (; i < 30; i++)
+				sample_block[i] = temp_block[24 + i - 18];
+			for (; i < 36; i++)
+				sample_block[i] = 0;
+		}
+
+		/* Overlap. */
+		for (int i = 0; i < 18; i++) {
+			samples[gr][ch][sample + i] = sample_block[i] + prev_samples[ch][block][i];
+			prev_samples[ch][block][i] = sample_block[18 + i];
+		}
+		sample += 18;
+	}
+}
+/* ###############################################
+
+*/
+
+void GTP::GMP3::gmp3_frequency_inversion(int gr, int ch)
+{
+	for (int sb = 1; sb < 18; sb += 2)
+		for (int i = 1; i < 32; i += 2)
+			samples[gr][ch][i * 18 + sb] *= -1;
+}
+/* ###############################################
+
+*/
+
+void GTP::GMP3::gmp3_synth_filterbank(int gr, int ch)
+{
+	static float n[64][32];
+	static bool init = true;
+
+	if (init) {
+		init = false;
+		for (int i = 0; i < 64; i++)
+			for (int j = 0; j < 32; j++)
+				n[i][j] = std::cos((16.0 + i) * (2.0 * j + 1.0) * (PI / 64.0));
+	}
+
+	float s[32], u[512], w[512];
+	float pcm[576];
+
+	for (int sb = 0; sb < 18; sb++) {
+		for (int i = 0; i < 32; i++)
+			s[i] = samples[gr][ch][i * 18 + sb];
+
+		for (int i = 1023; i > 63; i--)
+			fifo[ch][i] = fifo[ch][i - 64];
+
+		for (int i = 0; i < 64; i++) {
+			fifo[ch][i] = 0.0;
+			for (int j = 0; j < 32; j++)
+				fifo[ch][i] += s[j] * n[i][j];
+		}
+
+		for (int i = 0; i < 8; i++)
+			for (int j = 0; j < 32; j++) {
+				u[i * 64 + j] = fifo[ch][i * 128 + j];
+				u[i * 64 + j + 32] = fifo[ch][i * 128 + j + 96];
+			}
+
+		for (int i = 0; i < 512; i++)
+			w[i] = u[i] * synth_window[i];
+
+		for (int i = 0; i < 32; i++) {
+			float sum = 0;
+			for (int j = 0; j < 16; j++)
+				sum += w[j * 32 + i];
+			pcm[32 * sb + i] = sum;
+		}
+	}
+
+	memcpy(samples[gr][ch], pcm, 576 * 4);
+}
+/* ###############################################
+
+*/
+void GTP::GMP3::gmp3_interleave(){
+	int i = 0;
+	for (int gr = 0; gr < 2; gr++)
+		for (int sample = 0; sample < 576; sample++)
+			for (int ch = 0; ch < channels; ch++)
+				pcm[i++] = samples[gr][ch][sample];
+
+}
+/* ###############################################
+
+*/
+float *GTP::GMP3::gmp3_get_samples(){
+	return pcm;
+}
 
 
 
@@ -601,6 +928,7 @@ bool GTP::GMP3::stream(){
 		Badme Likhega me
 		pehle configuration kr leta hu
 	*/
+	return true;
 
 }
 

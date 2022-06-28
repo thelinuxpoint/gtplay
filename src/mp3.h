@@ -1,8 +1,9 @@
-#include<iostream>
-
+#include <iostream>
+#include <cmath>
 // project imports
 #include "wav.h"
 #include "tables.h"
+#include "id3.h"
 
 namespace GTP {
 
@@ -21,10 +22,6 @@ namespace GTP {
 			unsigned mode_extension[2];
 
 			bool info[3];
-
-			Emphasis emphasis;
-
-			ChannelMode channel_mode;
 			/**/
 			unsigned char *buffer;
 			/**/
@@ -87,6 +84,7 @@ namespace GTP {
 			// PRIVATE FUNCTIONS STARTS HERE
 			/**/
 			void gmp3_init_header(unsigned char *buffer);
+			void gmp3_init_frame_params(unsigned char *buffer);
 			/**/
 			void gmp3_set_layer(unsigned char byte);
 			/**/
@@ -110,6 +108,25 @@ namespace GTP {
 
 			void gmp3_set_info();
 
+			void gmp3_set_tables();
+
+			void gmp3_interleave();
+			void gmp3_set_side_info(unsigned char *buffer);
+			void gmp3_synth_filterbank(int gr, int ch);
+
+			void gmp3_frequency_inversion(int gr, int ch);
+
+			void gmp3_set_mode_extension(unsigned char *buffer);
+
+			void gmp3_imdct(int gr, int ch);
+
+			void gmp3_alias_reduction(int gr, int ch);
+			void gmp3_ms_stereo(int gr);
+			void gmp3_reorder(int gr, int ch);
+			void gmp3_requantize(int gr, int ch);
+			void gmp3_unpack_samples(unsigned char *main_data, int gr, int ch, int bit, int max_bit);
+
+			void gmp3_unpack_scalefac(unsigned char *main_data, int gr, int ch, int &bit);
 		public:
 
 			GMP3(unsigned char *buffer);
@@ -131,6 +148,9 @@ namespace GTP {
 				Reserved = 2,
 				CCITJ17 = 3
 			};
+			Emphasis emphasis;
+
+			ChannelMode channel_mode;
 
 			/* GET Functions */
 			unsigned gmp3_get_layer();
@@ -154,6 +174,10 @@ namespace GTP {
 			unsigned gmp3_get_frame_size();
 
 			unsigned gmp3_get_header_size();
+
+			float * gmp3_get_samples();
+			bool * gmp3_get_info();
+
 
 		/* ############# EOC ############# */
 	};

@@ -3,12 +3,12 @@ CFLAGS:= -lasound
 CC := g++
 
 
-default: wav.o mp3.o
+default: wav.o mp3.o id3.o
 	@printf "Compiling main ... ";
-	@$(CC) ./src/main.cpp  wav.o mp3.o $(CFLAGS);
+	@$(CC) ./src/main.cpp  wav.o mp3.o id3.o $(CFLAGS);
 	@printf "[OK]\n";
 
-# main: wav.o 
+# main: wav.o
 # 	@if [ $(shell id -u) -ne 0 ]; then \
 # 		echo "You need to run as root"; \
 # 		exit; \
@@ -28,7 +28,10 @@ mp3.o: ./src/mp3.h ./src/mp3.cpp
 	@$(CC) -c ./src/mp3.cpp -o mp3.o $(CFLAGS)
 	@printf "[OK]\n"
 
-
+id3.o: ./src/id3.h ./src/id3.cpp
+	@printf "Compiling id3.cpp ... ";
+	@$(CC) -c ./src/id3.cpp -o id3.o $(CFLAGS)
+	@printf "[OK]\n"
 install:
 
 config:

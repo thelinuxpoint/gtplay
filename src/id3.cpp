@@ -1,5 +1,5 @@
 #include <regex>
-#include "util.h"
+
 #include "id3.h"
 
 // #######################################################
@@ -63,7 +63,7 @@ bool id3::set_flags(unsigned char flags){
 
 	/*    x              x       x   x         0 0 0 0
 	      |              |       |   |         | | | |
-		Unsyncronized  Extended Exp Footer |  Must Be Unset 
+		Unsyncronized  Extended Exp Footer |  Must Be Unset
 	*/
 	for (int bit_num = 0; bit_num < 4; bit_num++)
 		if (flags >> bit_num & 1)
@@ -75,7 +75,7 @@ bool id3::set_flags(unsigned char flags){
 		else
 			this->id3_flags[bit_num-4] = false;
 
-	/*  id3_flags { bit4 , bit5 , bit6 , bit7 }  */ 
+	/*  id3_flags { bit4 , bit5 , bit6 , bit7 }  */
 
 	return true;
 }
@@ -88,7 +88,7 @@ const bool *id3::get_id3_flags(){
 
 void id3::set_extended_header_size(int size){
 
-	// if bit6 is set 
+	// if bit6 is set
 	if (this->id3_flags[ExtendedHeader] == 1)
 		this->extended_header_size = size;
 	else
@@ -134,7 +134,7 @@ void id3::set_fields(unsigned char *buffer){
 // #######################################################
 
 const vector<string> *id3::get_id3_fields(){
-	
+
 	return this->id3_frames;
 }
 // #######################################################
@@ -146,7 +146,7 @@ unsigned int id3::get_id3_fields_length(){
 // #######################################################
 
 unsigned get_bits(unsigned char *buffer, int start_bit, int end_bit){
-	
+
 	int start_byte = 0;
 	int end_byte = 0;
 
