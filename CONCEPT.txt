@@ -1,10 +1,10 @@
 # HEADER INFO ( 32 Bits or 4 Bytes ) :
 
 +------------------------------------+
-|	1111 1111 1111   1     xx    x   |
+|   1111 1111 1111   1     xx    x   |
 |        sync       I-D   Layer CRC  |
 +------------------------------------+-----------------------------------+
-|	  xxxx     xx      x        x      xx   xx      x        x      xx   |
+|     xxxx     xx      x        x      xx   xx      x        x      xx   |
 |  Bitrate  Freq  Padding  private  Mode ModeExt copyright  copy Emphasis|
 +------------------------------------------------------------------------+
 
