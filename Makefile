@@ -23,14 +23,14 @@ wav.o: ./src/wav.h ./src/wav.cpp
 	@$(CC) -c ./src/wav.cpp -o wav.o $(CFLAGS)
 	@printf "[OK]\n"
 
-mp3.o: ./src/mp3.h ./src/mp3.cpp
+mp3.o: ./src/gmp3/gmp3.hpp ./src/gmp3/gmp3.cpp
 	@printf "Compiling mp3.cpp ... ";
-	@$(CC) -c ./src/mp3.cpp -o mp3.o $(CFLAGS)
+	@$(CC) -c ./src/gmp3/gmp3.cpp -o mp3.o $(CFLAGS)
 	@printf "[OK]\n"
 
-id3.o: ./src/id3.h ./src/id3.cpp
+id3.o: ./src/util/id3.h ./src/util/id3.cpp
 	@printf "Compiling id3.cpp ... ";
-	@$(CC) -c ./src/id3.cpp -o id3.o $(CFLAGS)
+	@$(CC) -c ./src/util/id3.cpp -o id3.o $(CFLAGS)
 	@printf "[OK]\n"
 install:
 
