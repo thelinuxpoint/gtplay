@@ -1,9 +1,10 @@
 #include <iostream>
 #include <cmath>
+#include <cstring>
 // project imports
-#include "wav.h"
 #include "gtables.hpp"
-#include "id3.h"
+#include "../util/gutil.hpp"
+
 
 namespace GTP {
 

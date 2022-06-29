@@ -2,7 +2,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <iostream>
-
 GTP::GWAV::GWAV(){
 
 	snd_pcm_open(&handle, "default",SND_PCM_STREAM_PLAYBACK, 0);
@@ -11,22 +10,22 @@ GTP::GWAV::GWAV(){
  	snd_pcm_hw_params_any(handle, params);
 
 	snd_pcm_hw_params_set_access(handle, params,SND_PCM_ACCESS_RW_INTERLEAVED);
-	
+
 	snd_pcm_hw_params_set_format(handle, params,SND_PCM_FORMAT_S16_LE);
-	
+
 	std::cout<<"Setting channels as ... "<<2<<std::endl;
 	snd_pcm_hw_params_set_channels(handle, params, 2);
-	
+
 	std::cout<<"Setting rate as ... "<<this->rate<<std::endl;
 	snd_pcm_hw_params_set_rate_near(handle, params,&this->rate, &dir);
-	
+
 	std::cout<<"Setting buffer size as ... "<<temporary<<std::endl;
 	snd_pcm_hw_params_set_buffer_size_near(handle, params, &temporary);
 
 
 	std::cout<<"Setting period size as ... "<<period<<std::endl;
 	snd_pcm_hw_params_set_period_size_near(handle,params, &period, &dir);
-	
+
 
 	snd_pcm_hw_params(handle, params);
 
@@ -68,6 +67,3 @@ void GTP::GWAV::play(const char* file){
    	snd_pcm_drain(handle);
    	snd_pcm_close(handle);
 }
-
-
-

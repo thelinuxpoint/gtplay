@@ -1,9 +1,11 @@
 #include <string>
 #include <vector>
 #include <stdio.h>
+#include "gutil.hpp"
 
 using std::string;
 using std::vector;
+
 
 class id3 {
 		private:
@@ -42,10 +44,3 @@ class id3 {
 			unsigned int get_id3_fields_length();
 
 };
-
-unsigned get_bits(unsigned char *buffer, int start_bit, int end_bit);
-
-
-unsigned get_bits_inc(unsigned char *buffer, int *offset, int count);
-
-int char_to_int(unsigned char *buffer);

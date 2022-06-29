@@ -3,36 +3,35 @@ CFLAGS:= -lasound
 CC := g++
 
 
-default: wav.o mp3.o id3.o
+default: wav.o gmp3.o id3.o gutil.o
 	@printf "Compiling main ... ";
-	@$(CC) ./src/main.cpp  wav.o mp3.o id3.o $(CFLAGS);
+	@ar rcs libgtplay.a wav.o gmp3.o id3.o gutil.o
+	@$(CC) ./src/main.cpp -o gtplay -L . -lgtplay $(CFLAGS);
+	@rm wav.o gmp3.o id3.o gutil.o
 	@printf "[OK]\n";
 
-# main: wav.o
-# 	@if [ $(shell id -u) -ne 0 ]; then \
-# 		echo "You need to run as root"; \
-# 		exit; \
-# 	else \
-# 		printf "Compiling main ... ";\
-# 		$(CC) ./src/main.cpp  wav.o $(CFLAGS);\
-# 		printf "Done\n"; \
-# 	fi
-
-wav.o: ./src/wav.h ./src/wav.cpp
-	@printf "Compiling wav.cpp ... ";
-	@$(CC) -c ./src/wav.cpp -o wav.o $(CFLAGS)
+gutil.o: ./src/util/gutil.hpp ./src/util/gutil.cpp
+	@printf "Building Object File gutil.cpp ~> gutil.o => ";
+	@$(CC) -c ./src/util/gutil.cpp -o gutil.o $(CFLAGS)
 	@printf "[OK]\n"
 
-mp3.o: ./src/gmp3/gmp3.hpp ./src/gmp3/gmp3.cpp
-	@printf "Compiling mp3.cpp ... ";
-	@$(CC) -c ./src/gmp3/gmp3.cpp -o mp3.o $(CFLAGS)
+wav.o: ./src/gwav/wav.h ./src/gwav/wav.cpp
+	@printf "Building Object File wav.cpp ~> wav.o => ";
+	@$(CC) -c ./src/gwav/wav.cpp -o wav.o $(CFLAGS)
 	@printf "[OK]\n"
 
-id3.o: ./src/util/id3.h ./src/util/id3.cpp
-	@printf "Compiling id3.cpp ... ";
-	@$(CC) -c ./src/util/id3.cpp -o id3.o $(CFLAGS)
+gmp3.o: ./src/gmp3/gmp3.hpp ./src/gmp3/gmp3.cpp gutil.o
+	@printf "Building Object File gmp3.cpp ~> gmp3.o => ";
+	@$(CC) -c ./src/gmp3/gmp3.cpp -o gmp3.o $(CFLAGS)
 	@printf "[OK]\n"
+
+id3.o: ./src/util/id3.h ./src/util/id3.cpp gutil.o
+	@printf "Building Object File id3.cpp ~> id3.o => ";
+	@$(CC) -c ./src/util/id3.cpp -o id3.o  $(CFLAGS)
+	@printf "[OK]\n"
+
 install:
+	@echo "Not Configured yet";
 
 config:
 	@apt-get install libasound2-dev
