@@ -1,4 +1,5 @@
 # Gt-Play
+[![C/C++ CI](https://github.com/thelinuxpoint/gtplay/actions/workflows/c-cpp.yml/badge.svg?branch=main)](https://github.com/thelinuxpoint/gtplay/actions/workflows/c-cpp.yml)  
 Raw mp3 decoder designed with ALSA ( advanced linux sound architecture )
 
 ## Dependencies
