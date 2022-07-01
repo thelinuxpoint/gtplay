@@ -29,10 +29,8 @@ id3.o: ./src/util/id3.h ./src/util/id3.cpp gutil.o
 	@$(CC) -c ./src/util/id3.cpp -o id3.o  $(CFLAGS)
 	@printf "[OK]\n"
 
-
-
 install:
-	@echo "Not Configured yet";
+	@echo "Not Reached Max Effeciency";
 
 config:
 	@apt-get install libasound2-dev

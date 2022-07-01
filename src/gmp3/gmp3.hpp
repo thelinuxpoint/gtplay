@@ -200,11 +200,7 @@ namespace GTP {
 
 			bool *gmp3_get_info();
 
-
 		/* ############# EOC ############# */
 	};
-
-	bool stream(GTP::GMP3 &decoder,std::vector<unsigned char> &buffer, unsigned offset);
-
 
 }
