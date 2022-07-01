@@ -1,3 +1,11 @@
+/* #############################################################
+
+	AUTHOR : Prakash Choudhary
+	EMAIL  : thelinuxpointsup@gmail.com
+	Reference : https://github.com/FlorisCreyf/mp3-decoder
+
+#################################################################*/
+
 #include <iostream>
 #include <cmath>
 #include <cstring>
@@ -6,7 +14,6 @@
 // project imports
 #include "gtables.hpp"
 #include "../util/gutil.hpp"
-
 
 namespace GTP {
 

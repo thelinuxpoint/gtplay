@@ -1,11 +1,11 @@
 
-CFLAGS:= -lasound
+CFLAGS:= -lasound -pthread
 CC := g++
 
 
 default: wav.o gmp3.o id3.o gutil.o
 	@printf "Compiling gtplay v0.1.0 => ";
-	@ar rcs libgtplay.a wav.o gmp3.o id3.o gutil.o
+	@ar rcs libgtplay.a wav.o gmp3.o id3.o gutil.o gplay.o
 	@$(CC) ./src/main.cpp -o gtplay -L . -lgtplay $(CFLAGS);
 	@printf "[OK]\n";
 
@@ -28,6 +28,8 @@ id3.o: ./src/util/id3.h ./src/util/id3.cpp gutil.o
 	@printf "Building Object File [ id3.cpp ~> id3.o ] => ";
 	@$(CC) -c ./src/util/id3.cpp -o id3.o  $(CFLAGS)
 	@printf "[OK]\n"
+
+
 
 install:
 	@echo "Not Configured yet";

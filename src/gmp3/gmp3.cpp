@@ -1,11 +1,9 @@
 #include <vector>
-
-#include "gmp3.hpp"
-
+#include "gplay.hpp"
 // ###############################################
 /* MPEG HEADER
   +---------------------------------------------+
-  |	1111 1111 1111   1     xx    x              |
+  | 1111 1111 1111   1     xx    x              |
   |      sync       I-D   Layer CRC             |
   +---------------------------------------------+--------------------------+
   |	  xxxx     xx      x        x      xx   xx      x          x    xx     |
@@ -920,63 +918,6 @@ void GTP::GMP3::gmp3_interleave(){
 float *GTP::GMP3::gmp3_get_samples(){
 	return pcm;
 }
-/* ###############################################
-	[#] ALSA in ACTION:
-		-> put data into buffer of pcm device.
-*/
-bool GTP::stream(GTP::GMP3 &decoder, std::vector<unsigned char> &buffer, unsigned offset) {
-
-	unsigned sampling_rate = decoder.gmp3_get_sampling_rate();
-	unsigned channels = 2;// decoder.gmp3_get_channel_mode() == GTP::GMP3::Mono ? 1 : 2;
-	snd_pcm_t *handle;
-	snd_pcm_hw_params_t *hw = NULL;
-	snd_pcm_uframes_t frames = 128;
-
-	if (snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0)
-		exit(1);
-
-	snd_pcm_hw_params_alloca(&hw);
-	snd_pcm_hw_params_any(handle, hw);
-
-	if (snd_pcm_hw_params_set_access(handle, hw, SND_PCM_ACCESS_RW_INTERLEAVED) < 0)
-		exit(1);
-	if (snd_pcm_hw_params_set_format(handle, hw, SND_PCM_FORMAT_FLOAT_LE) < 0)
-		exit(1);
-	if (snd_pcm_hw_params_set_channels(handle, hw, channels) < 0)
-		exit(1);
-	if (snd_pcm_hw_params_set_rate_near(handle, hw, &sampling_rate, NULL) < 0)
-		exit(1);
-	if (snd_pcm_hw_params_set_period_size_near(handle, hw, &frames, NULL) < 0)
-		exit(1);
-	if (snd_pcm_hw_params(handle, hw) < 0)
-		exit(1);
-	if (snd_pcm_hw_params_get_period_size(hw, &frames, NULL) < 0)
-		exit(1);
-	if (snd_pcm_hw_params_get_period_time(hw, &sampling_rate, NULL) < 0)
-		exit(1);
-
-	/* Start decoding. */
-	while (decoder.is_valid() && buffer.size() > offset + decoder.gmp3_get_header_size()) {
-		// printf("offset %d\n",offset );
-		decoder.gmp3_init_header(&buffer[offset]);
-		if (decoder.is_valid()) {
-			decoder.gmp3_init_frame_params(&buffer[offset]);
-			offset += decoder.gmp3_get_frame_size();
-		}
-		int err = snd_pcm_writei(handle, decoder.gmp3_get_samples(), 1152);
-		if (err == -EPIPE){
-			snd_pcm_recover(handle, err, 0);
-			snd_pcm_prepare(handle);
-		}else if (err < 0) {
-       		fprintf(stderr,"error from writei: %s\n",snd_strerror(err));
-       		snd_pcm_prepare(handle);
-     	}
-	}
-
-	snd_pcm_drain(handle);
-	snd_pcm_close(handle);
-	return true;
-}
 
 // ###############################################
 
@@ -1036,5 +977,76 @@ unsigned GTP::GMP3::gmp3_get_sampling_rate(){
 // ###############################################
 unsigned GTP::GMP3::gmp3_get_header_size(){
 	return 4;
+}
+
+
+
+
+
+
+
+
+/* ###############################################
+	[#] ALSA in ACTION:
+		-> put data into buffer of pcm device.
+*/
+bool GTP::stream(GTP::GMP3 &decoder, std::vector<unsigned char> &buffer, unsigned offset) {
+
+	unsigned sampling_rate = decoder.gmp3_get_sampling_rate();
+	unsigned channels = 2;// decoder.gmp3_get_channel_mode() == GTP::GMP3::Mono ? 1 : 2;
+	snd_pcm_t *handle;
+	snd_pcm_hw_params_t *hw = NULL;
+	snd_pcm_uframes_t frames = 512;
+	snd_pcm_sw_params_t *sw;
+
+
+	if (snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0)
+		exit(1);
+
+	snd_pcm_hw_params_alloca(&hw);
+	snd_pcm_hw_params_any(handle, hw);
+
+	if (snd_pcm_hw_params_set_access(handle, hw, SND_PCM_ACCESS_RW_INTERLEAVED) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_set_format(handle, hw, SND_PCM_FORMAT_FLOAT_LE) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_set_channels(handle, hw, channels) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_set_rate_near(handle, hw, &sampling_rate, NULL) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_set_period_size_near(handle, hw, &frames, NULL) < 0)
+		exit(1);
+	if (snd_pcm_hw_params(handle, hw) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_get_period_size(hw, &frames, NULL) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_get_period_time(hw, &sampling_rate, NULL) < 0)
+		exit(1);
+
+	/* Start decoding. */
+	while (decoder.is_valid() && buffer.size() > offset + decoder.gmp3_get_header_size()) {
+		// printf("offset %d\n",offset );
+		decoder.gmp3_init_header(&buffer[offset]);
+		if (decoder.is_valid()) {
+			decoder.gmp3_init_frame_params(&buffer[offset]);
+			offset += decoder.gmp3_get_frame_size();
+		}
+		int err = snd_pcm_writei(handle, decoder.gmp3_get_samples(), 1152);
+
+		if (err == -EPIPE){
+			snd_pcm_prepare(handle);
+			printf("underrun occured\n");
+		}else if (err == -ESTRPIPE) {
+			while ((err = snd_pcm_resume(handle)) == -EAGAIN)
+			sleep(1);	/* wait until suspend flag is gone */
+			if (err < 0) {
+				snd_pcm_prepare(handle);
+			}
+     	}
+	}
+
+	snd_pcm_drain(handle);
+	snd_pcm_close(handle);
+	return true;
 }
 // ##############################  THE END  ##################################

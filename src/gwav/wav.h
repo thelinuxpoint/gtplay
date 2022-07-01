@@ -18,7 +18,6 @@ namespace GTP {
 			unsigned int rate = 44100;
 			int size = 128;
 
-
 		public:
 
 			snd_pcm_t *handle;

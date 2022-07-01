@@ -1,9 +1,13 @@
 #include <iostream>
 #include <fstream>
-/**/
+#include <functional>
+// #include <gtkmm.h>
+#include <thread>
+/*  Project Imports  */
 #include "./gmp3/gmp3.hpp"
 #include "./util/id3.h"
-/**/
+
+/*#######################*/
 std::vector<id3> get_id3_tags(std::vector<unsigned char> &buffer, unsigned &offset){
 	std::vector<id3> tags;
 	int i = 0;
@@ -18,7 +22,7 @@ std::vector<id3> get_id3_tags(std::vector<unsigned char> &buffer, unsigned &offs
 	}
 	return tags;
 }
-/**/
+/*#######################*/
 std::vector<unsigned char> get_file(const char *dir){
 
 	std::ifstream file(dir, std::ios::in | std::ios::binary | std::ios::ate);
@@ -28,7 +32,8 @@ std::vector<unsigned char> get_file(const char *dir){
 	file.close();
 	return std::move(buffer);
 }
-/**/
+/*#######################*/
+
 int main(int argc, char const *argv[]){
     std::cout << "******************** GTPlay ********************" << '\n';
 
@@ -45,12 +50,14 @@ int main(int argc, char const *argv[]){
 		unsigned offset = 0;
 		std::vector<id3> tags = get_id3_tags(buffer, offset);
 		GTP::GMP3 decoder(&buffer[offset]);
-        GTP::stream(decoder,buffer,offset);
-
+		auto stream_th = std::bind(GTP::stream,decoder,buffer,offset);
+        // GTP::stream(decoder,buffer,offset);
+		std::thread t(stream_th);
+		t.join();
 	} catch (std::bad_alloc) {
 		printf("File does not exist.\n");
 		return -1;
 	}
-
+	std::cout<<"**************** Decoding Finished ****************"<<std::endl;
     return 0;
 }
