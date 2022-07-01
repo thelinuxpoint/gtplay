@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cmath>
 #include <cstring>
+#include <alsa/asoundlib.h>
+#include <vector>
 // project imports
 #include "gtables.hpp"
 #include "../util/gutil.hpp"
@@ -27,9 +29,9 @@ namespace GTP {
 			/* Pointer to the buffer */
 			unsigned char *buffer;
 			/* */
-			bool valid;
+			bool valid = true;
 			/*###############################################*/
-			static const int num_prev_frames = 9;
+			int num_prev_frames = 9;
 			int prev_frame_size[9];
 			int frame_size;
 
@@ -85,9 +87,7 @@ namespace GTP {
 			/*###############################################*/
 			// PRIVATE FUNCTIONS STARTS HERE
 			/**/
-			void gmp3_init_header(unsigned char *buffer);
-			/**/
-			void gmp3_init_frame_params(unsigned char *buffer);
+
 			/**/
 			void gmp3_set_layer(unsigned char byte);
 			/**/
@@ -140,8 +140,6 @@ namespace GTP {
 
 			GMP3(unsigned char *buffer);
 
-			bool stream();
-
 			bool is_valid();
 
 			enum ChannelMode {
@@ -162,7 +160,13 @@ namespace GTP {
 
 			ChannelMode channel_mode;
 
+			void gmp3_init_header(unsigned char *buffer);
+			/**/
+			void gmp3_init_frame_params(unsigned char *buffer);
+
+
 			/* GET Functions */
+
 			unsigned gmp3_get_layer();
 
 			float gmp3_get_mpeg_v();
@@ -192,5 +196,8 @@ namespace GTP {
 
 		/* ############# EOC ############# */
 	};
+
+	bool stream(GTP::GMP3 &decoder,std::vector<unsigned char> &buffer, unsigned offset);
+
 
 }

@@ -46,7 +46,6 @@ void GTP::GMP3::gmp3_init_header(unsigned char *buffer){
 		gmp3_set_padding();
 		gmp3_set_bit_rate(buffer);
 		gmp3_set_frame_size();
-
 	}else {
 		valid = false;
 	}
@@ -80,7 +79,10 @@ void GTP::GMP3::gmp3_init_frame_params(unsigned char *buffer){
 	gmp3_interleave();
 }
 
-
+/** Check validity of the header and frame. */
+bool GTP::GMP3::is_valid(){
+	return valid;
+}
 /* ###############################################
 	‘1’ - then MPEG version 1
 	‘0’ - then MPEG version 2
@@ -191,6 +193,7 @@ void GTP::GMP3::gmp3_set_sampling_rate(){
 			}
 		}
 }
+
 /* ###############################################
 
 */
@@ -292,7 +295,7 @@ void GTP::GMP3::gmp3_set_frame_size(){
 		prev_frame_size[i] = prev_frame_size[i-1];
 	}
 	prev_frame_size[0] = frame_size;
-	frame_size = ( (samples_per_frame / 8) * (bit_rate / sampling_rate));
+	frame_size = ( samples_per_frame / 8 * bit_rate / sampling_rate );
 	if (padding == 1){
 		frame_size += 1;
 	}
@@ -361,7 +364,7 @@ void GTP::GMP3::gmp3_set_side_info(unsigned char *buffer){
 				/* No third region. */
 				region1_count[gr][ch] = 20 - region0_count[gr][ch];
 
-				for (int region = 0; region < 2; region++)
+				for (int region = 0; region <2; region++)
 					/* Huffman table number for a big region. */
 					table_select[gr][ch][region] = (int)get_bits_inc(buffer, &count, 5);
 				for (int window = 0; window < 3; window++)
@@ -417,7 +420,6 @@ void GTP::GMP3::gmp3_set_main_data(unsigned char *buffer){
 
 				int part[num_prev_frames];
 				part[frame] = main_data_begin;
-
 				for (int i = 0; i <= frame-1; i++) {
 					part[i] = prev_frame_size[i] - constant;
 					part[frame] -= part[i];
@@ -918,23 +920,63 @@ void GTP::GMP3::gmp3_interleave(){
 float *GTP::GMP3::gmp3_get_samples(){
 	return pcm;
 }
-
-
-
-
 /* ###############################################
 	[#] ALSA in ACTION:
 		-> put data into buffer of pcm device.
 */
-bool GTP::GMP3::stream(){
-	/*
-		Badme Likhega me
-		pehle configuration kr leta hu
-	*/
+bool GTP::stream(GTP::GMP3 &decoder, std::vector<unsigned char> &buffer, unsigned offset) {
+
+	unsigned sampling_rate = decoder.gmp3_get_sampling_rate();
+	unsigned channels = 2;// decoder.gmp3_get_channel_mode() == GTP::GMP3::Mono ? 1 : 2;
+	snd_pcm_t *handle;
+	snd_pcm_hw_params_t *hw = NULL;
+	snd_pcm_uframes_t frames = 128;
+
+	if (snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0)
+		exit(1);
+
+	snd_pcm_hw_params_alloca(&hw);
+	snd_pcm_hw_params_any(handle, hw);
+
+	if (snd_pcm_hw_params_set_access(handle, hw, SND_PCM_ACCESS_RW_INTERLEAVED) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_set_format(handle, hw, SND_PCM_FORMAT_FLOAT_LE) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_set_channels(handle, hw, channels) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_set_rate_near(handle, hw, &sampling_rate, NULL) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_set_period_size_near(handle, hw, &frames, NULL) < 0)
+		exit(1);
+	if (snd_pcm_hw_params(handle, hw) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_get_period_size(hw, &frames, NULL) < 0)
+		exit(1);
+	if (snd_pcm_hw_params_get_period_time(hw, &sampling_rate, NULL) < 0)
+		exit(1);
+
+	/* Start decoding. */
+	while (decoder.is_valid() && buffer.size() > offset + decoder.gmp3_get_header_size()) {
+		// printf("offset %d\n",offset );
+		decoder.gmp3_init_header(&buffer[offset]);
+		if (decoder.is_valid()) {
+			decoder.gmp3_init_frame_params(&buffer[offset]);
+			offset += decoder.gmp3_get_frame_size();
+		}
+		int err = snd_pcm_writei(handle, decoder.gmp3_get_samples(), 1152);
+		if (err == -EPIPE){
+			snd_pcm_recover(handle, err, 0);
+			snd_pcm_prepare(handle);
+		}else if (err < 0) {
+       		fprintf(stderr,"error from writei: %s\n",snd_strerror(err));
+       		snd_pcm_prepare(handle);
+     	}
+	}
+
+	snd_pcm_drain(handle);
+	snd_pcm_close(handle);
 	return true;
-
 }
-
 
 // ###############################################
 
@@ -990,5 +1032,9 @@ unsigned GTP::GMP3::gmp3_get_bitrate(){
 
 unsigned GTP::GMP3::gmp3_get_sampling_rate(){
 	return sampling_rate;
+}
+// ###############################################
+unsigned GTP::GMP3::gmp3_get_header_size(){
+	return 4;
 }
 // ##############################  THE END  ##################################

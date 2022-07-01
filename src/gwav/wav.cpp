@@ -44,14 +44,14 @@ GTP::GWAV::GWAV(){
 	printf("PCM state: %s\n", snd_pcm_state_name(snd_pcm_state(handle)));
 }
 
-void GTP::GWAV::play(const char* file){
+void GTP::GWAV::stream(const char* file){
 
 	this->fd = open(file,O_RDONLY);
 	int count=0;
 
 	while (read(this->fd,this->buf,this->size)){
 		count++;
-			if (count>12){
+			if (count > 12){
 				err = snd_pcm_writei(handle, this->buf, frames);
 	    		if (err == -EPIPE) {
 	       		/* EPIPE means underrun */

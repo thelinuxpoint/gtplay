@@ -1,13 +1,13 @@
 /*
 	sample is of 16 bit
 	frame = no of channel x 16bit
-	
+
 */
 #include<alsa/asoundlib.h>
 #include <string>
 
 namespace GTP {
-	
+
 	class GWAV {
 
 		private:
@@ -31,9 +31,9 @@ namespace GTP {
 			//#################################
 			GWAV();
 			//#################################
-			void play(const char * ptr);
+			void stream(const char * ptr);
 
-			void play(std::string file);
+			void stream(std::string file);
 
 	};
 
