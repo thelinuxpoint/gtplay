@@ -3,3 +3,4 @@
 *.mp3
 *.wav
 gtplay
+stm32decoder/target

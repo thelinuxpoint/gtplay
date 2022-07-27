@@ -18,6 +18,7 @@ namespace GTP{
 
 		public:	
 
+  			Glib::RefPtr<Gtk::Builder> m_refBuilder;
  			static Glib::RefPtr<GPlayApp> create();
 
 	};
