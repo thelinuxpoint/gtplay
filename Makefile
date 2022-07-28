@@ -41,7 +41,7 @@ id3.o: ./src/util/id3.h ./src/util/id3.cpp
 
 ui.o: ./src/ui/ui.hpp ./src/ui/ui.cpp
 	@printf "\033[1m\033[32mBuilding Object File\033[0m ui.cpp ⇒ ui.o → ";
-	@$(CC) -c -fmodules-ts ./src/ui/ui.cpp -o ui.o  $(CFLAGS)
+	@$(CC) -c ./src/ui/ui.cpp -o ui.o  $(CFLAGS)
 	@printf "[\033[1m\033[35mOK\033[0m]\n"
 
 window.o: ./src/ui/window.hpp ./src/ui/window.cpp
