@@ -8,7 +8,12 @@ namespace GTP{
 		public:
 			GPanel();
 			Gtk::Button *gb_play;
+			Gtk::Button *gb_forward;
+			Gtk::Button *gb_previous;
+			Gtk::HBox *hbox;
+			Gtk::ScaleButton *vol;
 
+			Gtk::Scale *g_pbr;
 	};
 }
 
