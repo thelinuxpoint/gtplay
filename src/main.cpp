@@ -16,6 +16,7 @@ static void sig_handler(int _){
 	printf("\33[2K\r* \x1b[1m\x1b[35mCtrl + C\x1b[0m received ... waiting for last frame\n");
     keep_running = 0;
 }
+
 bool stream(GTP::GMP3 &decoder, std::vector<unsigned char> &buffer, unsigned offset) {
 
 	unsigned sampling_rate = decoder.gmp3_get_sampling_rate();

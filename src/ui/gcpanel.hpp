@@ -12,8 +12,12 @@ namespace GTP{
 			Gtk::Button *gb_previous;
 			Gtk::HBox *hbox;
 			Gtk::ScaleButton *vol;
-
 			Gtk::Scale *g_pbr;
+
+			Glib::RefPtr<Gtk::Adjustment> m_adjustment;
+
+			void on_adjustment_value_changed();
+			
 	};
 }
 
